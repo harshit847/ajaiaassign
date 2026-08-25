@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DocCollab - Collaborative Document Editor
 
-## Getting Started
+A lightweight collaborative document editor inspired by Google Docs, built with Next.js, TypeScript, and Tiptap.
 
-First, run the development server:
+## Features
+
+- **User Authentication** — Register, login, and logout with cookie-based sessions
+- **Document CRUD** — Create, read, update, and delete documents
+- **Rich Text Editing** — Bold, italic, underline, headings (H1-H3), bulleted and numbered lists via Tiptap
+- **Auto-Save** — Documents save automatically 1 second after you stop typing
+- **File Import** — Import `.txt` and `.md` files into your documents
+- **Document Sharing** — Share documents with other users (edit or view access)
+- **Dashboard** — See owned and shared documents separately
+- **Responsive UI** — Works on desktop and mobile
+- **Validation & Error Handling** — Input validation, auth guards, user-friendly error messages
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+ (recommended: 20+)
+- npm
+
+### Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Set up the database
+npx prisma db push
+npx prisma generate
+
+# (Optional) Seed demo users
+npx tsx prisma/seed.ts
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Run Tests
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test
+```
 
-## Learn More
+### Production Build
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+npm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Docker
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker build -t collab-editor .
+docker run -p 3000:3000 collab-editor
+```
 
-## Deploy on Vercel
+## Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS |
+| Editor | Tiptap (ProseMirror) |
+| Database | SQLite via Prisma ORM |
+| Auth | Cookie-based sessions, bcryptjs |
+| Testing | Vitest, React Testing Library |
+| Deployment | Docker |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+collab-editor/
+├── prisma/
+│   ├── schema.prisma       # Database schema
+│   └── seed.ts             # Demo user seeding
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/        # Auth endpoints
+│   │   │   └── documents/   # Document CRUD + sharing + import
+│   │   ├── docs/[id]/       # Editor page
+│   │   ├── login/           # Login/Register page
+│   │   ├── layout.tsx       # Root layout with AuthProvider
+│   │   └── page.tsx         # Dashboard
+│   ├── components/
+│   │   ├── Navbar.tsx       # Navigation bar
+│   │   └── TiptapEditor.tsx # Rich text editor component
+│   ├── lib/
+│   │   ├── auth.ts          # Authentication utilities
+│   │   ├── auth-context.tsx # React auth context
+│   │   ├── db.ts            # Prisma client singleton
+│   │   └── validation.ts    # Input validation helpers
+│   └── middleware.ts        # Route protection
+├── __tests__/
+│   ├── login.test.tsx       # Login page tests
+│   └── setup.ts             # Test setup
+├── Dockerfile               # Docker build
+└── vitest.config.ts         # Test configuration
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | Database connection string | `file:./dev.db` |
+| `SESSION_SECRET` | Secret for session tokens | `dev-secret-change-in-production` |
+| `NODE_ENV` | Environment mode | `development` |
+
+## License
+
+MIT

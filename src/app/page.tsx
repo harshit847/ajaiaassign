@@ -1,69 +1,185 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import Navbar from "@/components/Navbar";
+import Link from "next/link";
+
+interface Document {
+  id: string;
+  title: string;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export default function HomePage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [ownedDocs, setOwnedDocs] = useState<Document[]>([]);
+  const [sharedDocs, setSharedDocs] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [showNewDoc, setShowNewDoc] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchDocs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/documents");
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+      const data = await res.json();
+      setOwnedDocs(data.owned || []);
+      setSharedDocs(data.shared || []);
+    } catch {
+      setError("Failed to load documents");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    } else if (user) {
+      fetchDocs();
+    }
+  }, [user, authLoading, router, fetchDocs]);
+
+  const createDocument = async () => {
+    setCreating(true);
+    setError("");
+    try {
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle || "Untitled Document" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error);
+        return;
+      }
+      router.push(`/docs/${data.document.id}`);
+    } catch {
+      setError("Failed to create document");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (authLoading || loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      </>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <>
+      <Navbar />
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">My Documents</h1>
+          <button
+            onClick={() => setShowNewDoc(!showNewDoc)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            + New Document
+          </button>
         </div>
+
+        {showNewDoc && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+            <form
+              onSubmit={(e) => { e.preventDefault(); createDocument(); }}
+              className="flex gap-3 items-end"
+            >
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Document title</label>
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Untitled Document"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  autoFocus
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creating}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {creating ? "Creating..." : "Create"}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-2 mb-6">
+            {error}
+          </div>
+        )}
+
+        {ownedDocs.length === 0 && sharedDocs.length === 0 && (
+          <div className="text-center py-16">
+            <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-gray-500 text-lg">No documents yet</p>
+            <p className="text-gray-400 text-sm mt-1">Create your first document to get started</p>
+          </div>
+        )}
+
+        {ownedDocs.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Owned by me</h2>
+            <div className="grid gap-3">
+              {ownedDocs.map((doc) => (
+                <Link
+                  key={doc.id}
+                  href={`/docs/${doc.id}`}
+                  className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all group"
+                >
+                  <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{doc.title}</h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Updated {new Date(doc.updatedAt).toLocaleDateString()}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {sharedDocs.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Shared with me</h2>
+            <div className="grid gap-3">
+              {sharedDocs.map((doc) => (
+                <Link
+                  key={doc.id}
+                  href={`/docs/${doc.id}`}
+                  className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all group"
+                >
+                  <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{doc.title}</h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Updated {new Date(doc.updatedAt).toLocaleDateString()}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
-    </div>
+    </>
   );
 }
