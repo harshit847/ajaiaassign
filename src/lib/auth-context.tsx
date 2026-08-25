@@ -36,7 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    refreshUser();
+    async function init() {
+      await refreshUser();
+    }
+    init();
   }, []);
 
   const login = async (email: string, password: string) => {

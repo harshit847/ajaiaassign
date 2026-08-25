@@ -45,7 +45,10 @@ export default function HomePage() {
     if (!authLoading && !user) {
       router.push("/login");
     } else if (user) {
-      fetchDocs();
+      async function load() {
+        await fetchDocs();
+      }
+      load();
     }
   }, [user, authLoading, router, fetchDocs]);
 

@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
 
@@ -17,7 +18,7 @@ export function createSessionToken(userId: string): string {
   const payload = JSON.stringify({ userId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
   const encoded = Buffer.from(payload).toString("base64url");
   const signature = Buffer.from(
-    require("crypto").createHmac("sha256", SESSION_SECRET).update(encoded).digest()
+    crypto.createHmac("sha256", SESSION_SECRET).update(encoded).digest()
   ).toString("base64url");
   return `${encoded}.${signature}`;
 }
@@ -28,7 +29,7 @@ export function verifySessionToken(token: string): { userId: string } | null {
     if (!encoded || !signature) return null;
 
     const expectedSig = Buffer.from(
-      require("crypto").createHmac("sha256", SESSION_SECRET).update(encoded).digest()
+      crypto.createHmac("sha256", SESSION_SECRET).update(encoded).digest()
     ).toString("base64url");
 
     if (signature !== expectedSig) return null;

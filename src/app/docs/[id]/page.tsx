@@ -77,7 +77,10 @@ export default function DocumentPage() {
     if (!authLoading && !user) {
       router.push("/login");
     } else if (user) {
-      fetchDoc();
+      async function load() {
+        await fetchDoc();
+      }
+      load();
     }
   }, [user, authLoading, router, fetchDoc]);
 
